@@ -57,6 +57,7 @@ FileInstall(".\resources\twitter_icon.ico", $appDir & "twitter_icon.ico")
 FileInstall(".\resources\mudrpg_icon.ico", $appDir & "mudrpg_icon.ico")
 FileInstall(".\resources\website_icon.ico", $appDir & "website_icon.ico")
 FileInstall(".\resources\github.ico", $appDir & "github.ico")
+FileInstall(".\resources\pubgme.ico", $appDir & "pubgme.ico")
 
 
 
@@ -133,6 +134,10 @@ GUICtrlSetTip($gTwitterIcon, "Follow for updates on the program as it develops :
 $gGithubIcon = GUICtrlCreateIcon($appDir & "github.ico", 0, 335, 2, 32, 32)
 GUICtrlSetCursor($gGithubIcon, 0)
 GUICtrlSetTip($gGithubIcon, "Source code and more info at my Github for PUBG Streamer Statistics.", "My GitHub for this Project")
+
+$gPUBGMEIcon = GUICtrlCreateIcon($appDir & "pubgme.ico", 0, 370, 2, 32, 32)
+GUICtrlSetCursor($gPUBGMEIcon, 0)
+GUICtrlSetTip($gPUBGMEIcon, " ", "PUBG.ME")
 
 $gMudrpgIcon = -4563653
 $gWebsiteIcon = -4198031
@@ -390,6 +395,8 @@ While 1
 					ShellExecute('https://github.com/sdoddler/PUBG-Streamer-Statistics')
 				Case $gTwitterIcon
 					ShellExecute('https://twitter.com/sdoddler')
+				Case $gPUBGMEIcon
+					ShellExecute('https://pubg.me')
 				Case $gWebsiteIcon
 					ShellExecute('https://www.sdoddler.com/pubg')
 				Case $gCategories
