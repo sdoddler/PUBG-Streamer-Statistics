@@ -62,7 +62,7 @@ FileInstall(".\resources\pubgme.ico", $appDir & "pubgme.ico")
 
 
 If StringRight($scriptDir, 1) <> "\" Then $scriptDir &= "\"
-Global $settings = $scriptDir & "Resources\Settings.ini", $saveini = $scriptDir & "Resources\UpdateStats.ini"
+Global $settings = $appDir & "Settings.ini", $saveini = $appDir & "UpdateStats.ini"
 Global $lastSaveDir = IniRead($settings, "Settings", "LastSaveDir", @ScriptDir)
 Global $testTick = 0
 
@@ -114,6 +114,10 @@ _Log($def_minimizeToTray)
 If $def_minimizeToTray Then
 	GUICtrlSetState($mMinimizeToTray, $GUI_CHECKED)
 EndIf
+$def_StatName = IniRead($settings, "Settings", "IncludeStatName",False)
+
+If $def_StatName = 1 	Then 	$def_StatName = True
+If $def_StatName = 0 	Then 	$def_StatName = False
 
 $mManualRefresh = GUICtrlCreateMenuItem("Manual Refresh (all files)", $mFile, -1, 0)
 $mExit = GUICtrlCreateMenuItem("Exit", $mFile, -1, 1)
@@ -268,6 +272,12 @@ GUICtrlSetFont(-1,9)
 
 $gUser = GUICtrlCreateInput($def_user, 110, 258)
 
+$gCheckStat = GUICtrlCreateCheckbox("Include Stat Name in File", 230, 258)
+
+If $def_StatName Then
+	GUICtrlSetState($gCheckStat, $GUI_CHECKED)
+EndIf
+
 GUICtrlCreateLabel("Region:", 5, 293, 45)
 GUICtrlSetFont(-1, 9)
 
@@ -310,6 +320,7 @@ _GUICtrlListView_AddColumn($idListview, "Username")
 _GUICtrlListView_AddColumn($idListview, "Stat")
 _GUICtrlListView_AddColumn($idListview, "Mode")
 _GUICtrlListView_AddColumn($idListview, "Region")
+_GUICtrlListView_AddColumn($idListview, "Include Stat Name")
 
 
 #EndRegion ====== hMain GUI ======
@@ -418,6 +429,15 @@ While 1
 						$def_minimizeToTray = True
 					EndIf
 					_Log($def_minimizeToTray)
+
+				Case $gCheckStat
+					If BitAND(GUICtrlRead($gCheckStat), $GUI_CHECKED) = $GUI_CHECKED Then
+
+						$def_StatName = True
+					Else
+
+						$def_StatName = False
+					EndIf
 				Case $mManualRefresh
 					_AutoUpdate()
 			EndSwitch
@@ -491,6 +511,11 @@ Func _Exit()
 	Else
 		IniWrite($settings, "Settings", "MinimizeToTray", 0)
 	EndIf
+	if $def_StatName Then
+		IniWrite($settings, "Settings", "IncludeStatName", 1)
+	Else
+		IniWrite($settings, "Settings", "IncludeStatName", 0)
+	EndIf
 	Exit
 EndFunc   ;==>_Exit
 
@@ -553,7 +578,7 @@ Func _AutoUpdate()
 
 	$secNames = IniReadSectionNames($saveini)
 
-	Dim $updateArray[1000][5]
+	Dim $updateArray[1000][6]
 	$updateCount = 0
 	if IsArray($secNames) Then
 	For $i = 1 to $secNames[0]
@@ -562,6 +587,7 @@ Func _AutoUpdate()
 		$updateArray[$updateCount][2] = IniRead($saveini, $secNames[$i], "Mode", "ERROR")
 		$updateArray[$updateCount][3] = IniRead($saveini, $secNames[$i], "Region", "ERROR")
 		$updateArray[$updateCount][4] = IniRead($saveini, $secNames[$i], "Filename", "ERROR")
+		$updateArray[$updateCount][5] = IniRead($saveini, $secNames[$i], "IncludeStat", "No")
 
 		if $updateArray[$updateCount][2] = "All" Then
 			IniWrite($updateIni,"solo_" &$updateArray[$updateCount][3], $updateArray[$updateCount][0], 1)
@@ -574,7 +600,7 @@ Func _AutoUpdate()
 		$updateCount +=1
 		;_UpdateStat($secNames[$i], IniRead($saveini, $secNames[$i], "Stat", "ERROR"), IniRead($saveini, $secNames[$i], "Mode", "ERROR"), IniRead($saveini, $secNames[$i], "Region", "ERROR"),1)
 	Next
-	ReDim $updateArray[$updateCount][5]
+	ReDim $updateArray[$updateCount][6]
 	Else
 	Return 0
 	EndIf
@@ -607,7 +633,7 @@ _LOG($statGetError)
 	FileDelete($updateIni)
 
 	For $i = 0 to UBound($updateArray)-1
-		_UpdateStat($updateArray[$i][4], $updateArray[$i][0], $updateArray[$i][1], $updateArray[$i][2], $updateArray[$i][3],1)
+		_UpdateStat($updateArray[$i][4], $updateArray[$i][0], $updateArray[$i][1], $updateArray[$i][2], $updateArray[$i][3], $updateArray[$i][5],1)
 	Next
 
 ;~ Dim $pullArray[1000][4]
@@ -652,7 +678,7 @@ Func _UnloadResults($rArray, $rUser, $rMode, $rRegion)
 
 EndFunc
 
-Func _UpdateStat($file, $iUser, $stat, $mode, $region, $debug = 0)
+Func _UpdateStat($file, $iUser, $stat, $mode, $region, $includeStatName, $debug = 0)
 	_Log("Starting Update with the following settings: " &@LF & "File: " & $file &@LF& "Stat: " & $stat &@LF &  "Region: " & $region)
 	$testTick +=1
 ;~ 	_Log("Tick: " & $testTick)
@@ -667,11 +693,21 @@ Func _UpdateStat($file, $iUser, $stat, $mode, $region, $debug = 0)
 		$finalStat = _AllStatMath($iUser, $corrStat, $mode, $region)
 	EndIf
 
-	ConsoleWrite("Result: " & $finalStat &@LF)
-
-	$fHandle = FileOpen($file,2)
+	if $includeStatName = "Yes" Then
+		ConsoleWrite("Result: " & $stat & ": " & $finalStat &@LF)
+		$fHandle = FileOpen($file,2)
+	FileWrite($fHandle, $stat & ": " & $finalStat)
+	FileClose($fHandle)
+	Else
+		ConsoleWrite("Result: " & $finalStat &@LF)
+		$fHandle = FileOpen($file,2)
 	FileWrite($fHandle, $finalStat)
 	FileClose($fHandle)
+	EndIf
+
+
+
+
 EndFunc
 
 Func _StatFind($iStat)
@@ -982,6 +1018,13 @@ Func _AddRule()
 	_GUICtrlListView_AddSubItem($idListview, $item, $currStat,2)
 	_GUICtrlListView_AddSubItem($idListview, $item, $currMode, 3)
 	_GUICtrlListView_AddSubItem($idListview, $item, $currRegion, 4)
+	if $def_StatName Then
+	_GUICtrlListView_AddSubItem($idListview, $item, "Yes", 5)
+	IniWrite($saveini, $currFile, "IncludeStat", "Yes")
+	Else
+	_GUICtrlListView_AddSubItem($idListview, $item, "No", 5)
+	IniWrite($saveini, $currFile, "IncludeStat", "No")
+	EndIf
 
 	IniWrite($saveini, $currFile, "Filename", $currFile)
 	IniWrite($saveini, $currFile, "Username", $currUser)
@@ -1019,6 +1062,7 @@ Func _LoadRules()
 		_GUICtrlListView_AddSubItem($idListview, $item, IniRead($saveini, $secNames[$i], "Stat", "DELETE THIS RULE"), 2)
 		_GUICtrlListView_AddSubItem($idListview, $item, IniRead($saveini, $secNames[$i], "Mode", "DELETE THIS RULE"), 3)
 		_GUICtrlListView_AddSubItem($idListview, $item, IniRead($saveini, $secNames[$i], "Region", "DELETE THIS RULE"), 4)
+		_GUICtrlListView_AddSubItem($idListview, $item, IniRead($saveini, $secNames[$i], "IncludeStat", "No"), 5)
 	Next
 	EndIf
 EndFunc   ;==>_LoadRules
